@@ -1,89 +1,116 @@
-﻿;Created By valleyman86
+﻿;Created by valleyman86
+;Updated by Doug Krahmer (Dange Zone compatibility)
 ; needs to be #Persistent, otherwise events will kick few times and script exits.
 #Persistent
  
-PlayerName := "MurderDev\.com"
-ConsolePath := "C:\Program Files (x86)\Steam\SteamApps\common\Counter-Strike Global Offensive\csgo\console.log"
+consoleLogPath := "D:\Games\SteamLibrary\steamapps\common\Counter-Strike Global Offensive\csgo\console.log"
+;consoleLogPath := "D:\test.txt"
 
 AutoTrim, On
 
 ;Delete this section to remove auto recording
 ;-start-
 SetTimer MonitorConsoleLog, 500
-EraseConsoleLog(ConsolePath)
-File := FileOpen(ConsolePath, "r")
-;File := FileOpen("D:\test.txt", "rw")
-File.Seek(0, 2)
-Size0 := File.Length
-gMapName := ""
+TruncateFile(consoleLogPath)
+_consoleLogFile := FileOpen(consoleLogPath, "r")
+
+_consoleLogFile.Seek(0, 2)
+_size0 := _consoleLogFile.Length
+_mapName := ""
+_isNewConnectionToDzMap := 0
+_isRecording := 0
 ;-end-
  
 ;Delete this section to remove Ctrl+Shift+S hotkey recording
 ;-start-
 #If WinActive("ahk_exe csgo.exe")
-    ^+s::
-        RecordDemo()
-    return
+	^+s::
+		RecordDemo()
+	return
 #if
 ;-end-
  
 ;Delete this section to enable caps lock in game. (Note: It still works as a key it just does not stay toggled on)
 ;-start-
 #If WinActive("ahk_exe csgo.exe") or WinActive("ahk_exe dota.exe")
-    ~CapsLock Up::SetCapsLockState, off
+	~CapsLock Up::SetCapsLockState, off
 #if
 ;-end-
  
 RecordDemo()
 {
-    FormatTime, time, %A_Now%, MM-dd-yy_hh-mmtt
-    SendInput ``
-    Sleep, 250
-    SendInput record Saved_Demos\%gMapName%%time% {enter}
-    Sleep, 100
-    SendInput ``
+	;MsgBox RecordDemo
+	FormatTime, time, %A_Now%, MM-dd-yy_hh-mmtt
+	SendInput ``
+	Sleep, 250
+	SendInput record Saved_Demos\%_mapName%_%time% {enter}
+	Sleep, 100
+	SendInput ``
 }
 
-EraseConsoleLog(filePath)
+TruncateFile(filePath)
 {
-    FileToErase := FileOpen(filePath, "w")
-    FileToErase.Write("")
-    FileToErase.Close()
+	fileToClear := FileOpen(filePath, "w")
+	fileToClear.Write("")
+	fileToClear.Close()
 }
 
 MonitorConsoleLog:
-   global gMapName
-   Size := File.Length
+	global _mapName
+	global _isRecording
+	global _isNewConnectionToDzMap	; special handling for dz_* maps
+	
+	size := _consoleLogFile.Length
  
-   If (Size0 >= Size) {
-      Size0 := Size
-      File.Seek(0, 2)
-      Return
-   }
+	if (_size0 >= size) 
+	{
+		_size0 := size
+		_consoleLogFile.Seek(0, 2)
+		Return
+	}
  
-   ;LastLine := File.ReadLine()
-   while (LastLine := File.ReadLine()) {
-       if (RegExMatch(LastLine,"i)^Map: (.*/)?(.*)", MapName)) {
-           ;MsgBox %MapName2%
-	   gMapName := MapName2 . "_"
-       }
-
-       if (RegExMatch(LastLine,"i)" . PlayerName . " connected")) {
-           Sleep, 6000
-           RecordDemo()
-           ;MsgBox %LastLine%
-       }
+	while (logLine := _consoleLogFile.ReadLine())
+	{
+		if (RegExMatch(logLine, "i)^Map: (.*/)?(.*)", mapName)) 
+		{
+			_mapName := mapName2
+		}
+		else if (RegExMatch(logLine, "i).+ connected.")) 
+		{
+			if (_isRecording = 0)
+			{
+				if (RegExMatch(_mapName, "i)^dz_.+"))
+				{
+					_isNewConnectionToDzMap := 1
+				}
+				else
+				{
+					Sleep, 6000
+					RecordDemo()
+				}
+			}
+			;MsgBox %logLine%
+		}
+		else if (_isNewConnectionToDzMap = 1 and RegExMatch(logLine, "i)^ChangeGameUIState\: CSGO_GAME_UI_STATE_INGAME -\> CSGO_GAME_UI_STATE_INGAME")) 
+		{
+			_isNewConnectionToDzMap := 0
+			Sleep, 1000
+			;MsgBox %logLine%
+			RecordDemo()
+		}
+		else if (RegExMatch(logLine, "i)Recording to")) 
+		{
+			_isRecording := 1
+			SoundBeep
+			;SoundPlay recording_started.mp3
+		}
+		else if (RegExMatch(logLine, "i)Completed demo")) 
+		{
+			_isRecording := 0
+			SoundBeep
+			;SoundPlay replay_saved.mp3
+		}
+	}
  
-      if (RegExMatch(LastLine,"i)Recording to")) {
-          SoundBeep
-          ;SoundPlay recording_started.mp3
-      }
- 
-      if (RegExMatch(LastLine,"i)Completed demo")) {
-          SoundBeep
-          ;SoundPlay replay_saved.mp3
-      }
-   }
- 
-   Size0 := Size
+	_size0 := size
 Return
