@@ -17,7 +17,6 @@ Anyhow this script does 3 main things. It does not read memory or do anything wi
 >* Enable console in settings
 >* Add "-condebug" (without quotes) to your launch options in steam under CS:GO properties. This just outputs console to a log file (as well as the console).
 >* Create a Saved_Demos folder in the csgo directory
->* Change the PlayerName value in the top of the script to your in game name. Note: The characters \\.*?+[{|()^$ must be preceded by a backslash to be seen as literal. For example, \\. is a literal period and \\\ is a literal backslash.
 >* If you changed your steam directory you will need to edit the location of the console.log in the script as well. Its at the top and is called "ConsolePath".
 
 Without further ado. 
