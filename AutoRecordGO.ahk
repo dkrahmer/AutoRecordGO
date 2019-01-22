@@ -40,7 +40,7 @@ _isRecording := 0
 RecordDemo()
 {
 	;MsgBox RecordDemo
-	FormatTime, datetime, %A_Now%, yyyy-MM-dd_hh-mmtt
+	FormatTime, datetime, %A_Now%, yyyy-MM-dd_HH-mm-ss
 	SendInput ``
 	Sleep, 250
 	SendInput record Saved_Demos\%_mapName%_%datetime% {enter}
